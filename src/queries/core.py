@@ -1,4 +1,4 @@
-from sqlalchemy import text, insert, select, update
+from sqlalchemy import Integer, and_, func, text, insert, select, update
 from database import sync_engine, async_engine
 from models import metadata_obj, workers_table, resumes_table, Workload
 
@@ -81,6 +81,27 @@ class SyncCore:
             conn.execute(stmt)
             conn.commit()
 
+    @staticmethod
+    def select_resumes_avg_compensation(like_language: str = "Python"):
+        with sync_engine.connect() as conn:
+            query = (
+                select(
+                    resumes_table.c.workload,
+                    func.avg(resumes_table.c.compensation).cast(Integer).label("avg_compensation"),
+                )
+                .select_from(resumes_table)
+                .filter(and_(
+                    resumes_table.c.title.contains(like_language),
+                    resumes_table.c.compensation > 40000,
+                )) 
+                .group_by(resumes_table.c.workload)
+                .having(func.avg(resumes_table.c.compensation) > 70000)
+            )
+            print(query.compile(compile_kwargs={"literal_binds": True}))
+            res = conn.execute(query)
+            res = res.all()
+            print(res)
+
 
 class AsyncCore:
     @staticmethod
@@ -145,3 +166,24 @@ class AsyncCore:
             stmt = insert(resumes_table).values(resumes)
             await conn.execute(stmt)
             await conn.commit()
+
+    @staticmethod
+    async def select_resumes_avg_compensation(like_language: str = "Python"):
+        async with async_engine.connect() as conn:
+            query = (
+                select(
+                    resumes_table.c.workload,
+                    func.avg(resumes_table.c.compensation).cast(Integer).label("avg_compensation"),
+                )
+                .select_from(resumes_table)
+                .filter(and_(
+                    resumes_table.c.title.contains(like_language),
+                    resumes_table.c.compensation > 40000,
+                )) 
+                .group_by(resumes_table.c.workload)
+                .having(func.avg(resumes_table.c.compensation) > 70000)
+            )
+            print(query.compile(compile_kwargs={"literal_binds": True}))
+            res = await conn.execute(query)
+            res = res.all()
+            print(res)
