@@ -12,4 +12,8 @@ SyncORM.create_tables()
 SyncORM.insert_workers()
 # SyncCore.insert_workers()
 
-SyncCore.select_workers()
+SyncORM.select_workers()
+# SyncCore.select_workers()
+
+SyncORM.update_worker()
+# SyncCore.update_worker()

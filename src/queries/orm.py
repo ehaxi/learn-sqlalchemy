@@ -1,4 +1,4 @@
-from sqlalchemy import text, insert
+from sqlalchemy import text, insert, select
 from database import sync_engine, async_engine, session_factory, async_session_factory, Base
 from models import WorkersOrm, ResumesOrm, Workload
 
@@ -22,6 +22,39 @@ class SyncORM:
             session.flush()
             session.commit()
 
+    @staticmethod
+    def select_workers():
+        with session_factory() as session:
+            query = select(WorkersOrm)
+            result = session.execute(query)
+            workers = result.scalars().all()
+            print(f"{workers=}")
+
+    @staticmethod
+    def update_worker(worker_id: int = 1, new_username: str = "Jack"):
+        with session_factory() as session:
+            worker = session.get(WorkersOrm, worker_id)
+            worker.username = new_username
+            # refresh нужен, если мы хотим заново подгрузить данные модели из базы.
+            # Подходит, если мы давно получили модель и в это время
+            # данные в базе данныхмогли быть изменены
+            session.refresh(worker)
+            session.commit()
+
+    @staticmethod
+    def insert_resumes():
+        with session_factory() as session:
+            resume_ivan_1 = ResumesOrm(
+                title="Python Junior Developer", compensation=50000, workload=Workload.fulltime, worker_id=1)
+            resume_ivan_2 = ResumesOrm(
+                title="Python Разработчик", compensation=150000, workload=Workload.fulltime, worker_id=1)
+            resume_john_1 = ResumesOrm(
+                title="Python Data Engineer", compensation=250000, workload=Workload.parttime, worker_id=2)
+            resume_john_2 = ResumesOrm(
+                title="Data Scientist", compensation=300000, workload=Workload.fulltime, worker_id=2)
+            session.add_all([resume_ivan_1, resume_ivan_2, 
+                             resume_john_1, resume_john_2])
+            session.commit()
 
 
 class AsyncORM:
@@ -37,4 +70,35 @@ class AsyncORM:
             worker_ivan = WorkersOrm(username="Ivan")
             worker_john = WorkersOrm(username="John")
             session.add_all([worker_ivan, worker_john])
+            await session.commit()
+
+    @staticmethod
+    async def select_workers():
+        async with async_session_factory() as session:
+            query = select(WorkersOrm)
+            result = await session.execute(query)
+            workers = result.scalars().all()
+            print(f"{workers=}")
+
+    @staticmethod
+    async def update_worker(worker_id: int = 1, new_username: str = "Jack"):
+        async with async_session_factory() as session:
+            worker = await session.get(WorkersOrm, worker_id)
+            worker.username = new_username
+            await session.refresh(worker)
+            await session.commit()
+
+    @staticmethod
+    async def insert_resumes():
+        async with async_session_factory() as session:
+            resume_ivan_1 = ResumesOrm(
+                title="Python Junior Developer", compensation=50000, workload=Workload.fulltime, worker_id=1)
+            resume_ivan_2 = ResumesOrm(
+                title="Python Разработчик", compensation=150000, workload=Workload.fulltime, worker_id=1)
+            resume_john_1 = ResumesOrm(
+                title="Python Data Engineer", compensation=250000, workload=Workload.parttime, worker_id=2)
+            resume_john_2 = ResumesOrm(
+                title="Data Scientist", compensation=300000, workload=Workload.fulltime, worker_id=2)
+            session.add_all([resume_ivan_1, resume_ivan_2, 
+                             resume_john_1, resume_john_2])
             await session.commit()
